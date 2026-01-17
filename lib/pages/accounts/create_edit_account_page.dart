@@ -21,7 +21,7 @@ class CreateEditAccountPage extends ConsumerStatefulWidget {
 
 class _CreateEditAccountPage extends ConsumerState<CreateEditAccountPage> {
   final _formKey = GlobalKey<FormState>();
-  
+
   final TextEditingController nameController = TextEditingController();
   final TextEditingController balanceController = TextEditingController();
   String accountIcon = accountIconList.keys.first;

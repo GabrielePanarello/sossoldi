@@ -33,7 +33,7 @@ class _CreateEditCategoryPage extends ConsumerState<CreateEditCategoryPage> {
   void _validateForm() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       final formState = _formKey.currentState;
       if (formState != null) {
         setState(() {
