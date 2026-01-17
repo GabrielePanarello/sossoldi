@@ -8,6 +8,7 @@ import '../../../providers/categories_provider.dart';
 import '../../../providers/transactions_provider.dart';
 import '../../../ui/device.dart';
 import '../../../ui/extensions.dart';
+import '../../ui/validators/form_validators.dart';
 import 'widgets/category_icon_color_selector.dart';
 
 class CreateEditCategoryPage extends ConsumerStatefulWidget {
@@ -21,14 +22,31 @@ class CreateEditCategoryPage extends ConsumerStatefulWidget {
 }
 
 class _CreateEditCategoryPage extends ConsumerState<CreateEditCategoryPage> {
+  final _formKey = GlobalKey<FormState>();
+
   final TextEditingController nameController = TextEditingController();
   late CategoryTransactionType categoryType;
   String categoryIcon = iconList.keys.first;
   int categoryColor = 0;
+  bool _isFormValid = false;
+
+  void _validateForm() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      
+      final formState = _formKey.currentState;
+      if (formState != null) {
+        setState(() {
+          _isFormValid = formState.validate();
+        });
+      }
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    nameController.addListener(_validateForm);
 
     final transactionType = ref.read(selectedTransactionTypeProvider);
     categoryType =
@@ -45,6 +63,7 @@ class _CreateEditCategoryPage extends ConsumerState<CreateEditCategoryPage> {
 
   @override
   void dispose() {
+    nameController.removeListener(_validateForm);
     nameController.dispose();
     super.dispose();
   }
@@ -90,35 +109,35 @@ class _CreateEditCategoryPage extends ConsumerState<CreateEditCategoryPage> {
               borderRadius: BorderRadius.circular(Sizes.borderRadius),
             ),
             child: ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty) {
-                  if (selectedCategory != null) {
-                    await ref
-                        .read(categoriesProvider.notifier)
-                        .updateCategory(
-                          name: nameController.text,
-                          type: categoryType,
-                          icon: categoryIcon,
-                          color: categoryColor,
-                        );
-                  } else {
-                    await ref
-                        .read(categoriesProvider.notifier)
-                        .addCategory(
-                          name: nameController.text,
-                          type: categoryType,
-                          icon: categoryIcon,
-                          color: categoryColor,
-                        );
-                  }
-                  ref.invalidate(selectedCategoryProvider);
-                  ref.invalidate(categoryMapProvider);
-                  // Result from the .pop is used in lib\pages\planning_page\manage_budget_page.dart.
-                  //
-                  // If the category has been created correctly, result is true.
-                  if (context.mounted) Navigator.of(context).pop(true);
-                }
-              },
+              onPressed: _isFormValid
+                  ? () async {
+                      if (selectedCategory != null) {
+                        await ref
+                            .read(categoriesProvider.notifier)
+                            .updateCategory(
+                              name: nameController.text,
+                              type: categoryType,
+                              icon: categoryIcon,
+                              color: categoryColor,
+                            );
+                      } else {
+                        await ref
+                            .read(categoriesProvider.notifier)
+                            .addCategory(
+                              name: nameController.text,
+                              type: categoryType,
+                              icon: categoryIcon,
+                              color: categoryColor,
+                            );
+                      }
+                      ref.invalidate(selectedCategoryProvider);
+                      ref.invalidate(categoryMapProvider);
+                      // Result from the .pop is used in lib\pages\planning_page\manage_budget_page.dart.
+                      //
+                      // If the category has been created correctly, result is true.
+                      if (context.mounted) Navigator.of(context).pop(true);
+                    }
+                  : null,
               child: Text(
                 "${selectedCategory == null ? "CREATE" : "UPDATE"} CATEGORY",
               ),
@@ -127,102 +146,117 @@ class _CreateEditCategoryPage extends ConsumerState<CreateEditCategoryPage> {
         ),
       ],
       body: SingleChildScrollView(
-        child: Column(
-          children: [
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(
-                horizontal: Sizes.lg,
-                vertical: Sizes.md,
-              ),
-              padding: const EdgeInsets.fromLTRB(
-                Sizes.lg,
-                Sizes.md,
-                Sizes.lg,
-                0,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(Sizes.borderRadiusSmall),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "NAME",
-                    style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(
+                  horizontal: Sizes.lg,
+                  vertical: Sizes.md,
+                ),
+                padding: const EdgeInsets.fromLTRB(
+                  Sizes.lg,
+                  Sizes.md,
+                  Sizes.lg,
+                  0,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(Sizes.borderRadiusSmall),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "NAME",
+                      style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
-                  ),
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(
-                      hintText: "Category name",
+                    TextFormField(
+                      controller: nameController,
+                      validator: Validators.required,
+                      decoration: const InputDecoration(
+                        hintText: "Category name",
+                      ),
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              padding: const EdgeInsets.fromLTRB(
-                Sizes.lg,
-                Sizes.md,
-                Sizes.lg,
-                0,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(Sizes.borderRadiusSmall),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "TYPE",
-                    style: Theme.of(context).textTheme.labelLarge!.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
+              Container(
+                width: double.infinity,
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                padding: const EdgeInsets.fromLTRB(
+                  Sizes.lg,
+                  Sizes.md,
+                  Sizes.lg,
+                  0,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(Sizes.borderRadiusSmall),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "TYPE",
+                      style: Theme.of(context).textTheme.labelLarge!.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
-                  ),
-                  DropdownButton<CategoryTransactionType>(
-                    value: categoryType,
-                    underline: const SizedBox(),
-                    isExpanded: true,
-                    items:
-                        (widget.hideIncome
-                                ? [
-                                    CategoryTransactionType.expense,
-                                  ] // Only show 'expense' if true
-                                : CategoryTransactionType
-                                      .values) // Otherwise, show all values
-                            .map((CategoryTransactionType type) {
-                              return DropdownMenuItem<CategoryTransactionType>(
-                                value: type,
-                                child: Text(
-                                  type.toString().split('.').last.capitalize(),
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                              );
-                            })
-                            .toList(),
-                    onChanged: (CategoryTransactionType? newType) {
-                      if (newType != categoryType) {
-                        setState(() => categoryType = newType!);
-                      }
-                    },
-                  ),
-                ],
+                    DropdownButton<CategoryTransactionType>(
+                      value: categoryType,
+                      underline: const SizedBox(),
+                      isExpanded: true,
+                      items:
+                          (widget.hideIncome
+                                  ? [
+                                      CategoryTransactionType.expense,
+                                    ] // Only show 'expense' if true
+                                  : CategoryTransactionType
+                                        .values) // Otherwise, show all values
+                              .map((CategoryTransactionType type) {
+                                return DropdownMenuItem<
+                                  CategoryTransactionType
+                                >(
+                                  value: type,
+                                  child: Text(
+                                    type
+                                        .toString()
+                                        .split('.')
+                                        .last
+                                        .capitalize(),
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleLarge,
+                                  ),
+                                );
+                              })
+                              .toList(),
+                      onChanged: (CategoryTransactionType? newType) {
+                        if (newType != categoryType) {
+                          setState(() => categoryType = newType!);
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-            CategoryIconColorSelector(
-              selectedIcon: categoryIcon,
-              selectedColor: categoryColor,
-              onIconChanged: (icon) => setState(() => categoryIcon = icon),
-              onColorChanged: (color) => setState(() => categoryColor = color),
-            ),
-            /* temporary hided, see #178
+              CategoryIconColorSelector(
+                selectedIcon: categoryIcon,
+                selectedColor: categoryColor,
+                onIconChanged: (icon) => setState(() => categoryIcon = icon),
+                onColorChanged: (color) =>
+                    setState(() => categoryColor = color),
+              ),
+              /* temporary hided, see #178
             Container(
               alignment: Alignment.centerLeft,
               padding: const EdgeInsets.only(left: 16, top: 32, bottom: 8),
@@ -253,32 +287,33 @@ class _CreateEditCategoryPage extends ConsumerState<CreateEditCategoryPage> {
               ),
             ),
             */
-            if (selectedCategory != null)
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(Sizes.lg),
-                child: TextButton.icon(
-                  onPressed: () => ref
-                      .read(categoriesProvider.notifier)
-                      .removeCategory(selectedCategory.id!)
-                      .whenComplete(() {
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                        }
-                      }),
-                  style: TextButton.styleFrom(
-                    side: const BorderSide(color: red, width: 1),
-                  ),
-                  icon: const Icon(Icons.delete_outlined, color: red),
-                  label: Text(
-                    "Delete category",
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyLarge!.copyWith(color: red),
+              if (selectedCategory != null)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(Sizes.lg),
+                  child: TextButton.icon(
+                    onPressed: () => ref
+                        .read(categoriesProvider.notifier)
+                        .removeCategory(selectedCategory.id!)
+                        .whenComplete(() {
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        }),
+                    style: TextButton.styleFrom(
+                      side: const BorderSide(color: red, width: 1),
+                    ),
+                    icon: const Icon(Icons.delete_outlined, color: red),
+                    label: Text(
+                      "Delete category",
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyLarge!.copyWith(color: red),
+                    ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
